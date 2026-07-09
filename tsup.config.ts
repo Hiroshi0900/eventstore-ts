@@ -5,6 +5,7 @@ export default defineConfig({
     index: "src/index.ts",
     "memory/index": "src/memory/index.ts",
     "dynamodb/index": "src/dynamodb/index.ts",
+    "postgres/index": "src/postgres/index.ts",
   },
   format: ["esm", "cjs"],
   dts: true,

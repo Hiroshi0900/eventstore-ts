@@ -24,6 +24,7 @@ Repository<A, C, E>              ← high-level: load/save aggregates
 EventStore (interface)           ← low-level: persist/fetch raw events & snapshots
     │
     ├── DynamoDBEventStore        ← @hiroshi0900/eventstore/dynamodb (production)
+    ├── PostgresEventStore        ← @hiroshi0900/eventstore/postgres (production)
     └── MemoryEventStore          ← @hiroshi0900/eventstore/memory (tests)
 ```
 
@@ -112,6 +113,37 @@ replays only newer events.
 > ⚠️ For cross-language data sharing, your serializers must produce the same
 > payload bytes as the Go serializers, and `AggregateId.asString()` must match
 > the Go `AsString()` for the same aggregate.
+
+## PostgreSQL store
+
+Mirrors the Go `postgres` adapter: same table layout and optimistic-lock
+semantics, so it is drop-in interchangeable with the DynamoDB store (useful
+for dual-write migrations). Works with `pg.Pool` structurally — no dependency
+on `pg` itself.
+
+```ts
+import { Pool } from "pg";
+import {
+  PostgresEventStore,
+  defaultPostgresStoreConfig,
+} from "@hiroshi0900/eventstore/postgres";
+
+const store = new PostgresEventStore({
+  pool: new Pool({ connectionString: process.env.DATABASE_URL }),
+  aggregateSerializer: jsonAggregateSerializer(encodeCounter, decodeCounter),
+  eventSerializer: jsonEventSerializer(encodeEvent, decodeEvent),
+  config: defaultPostgresStoreConfig(), // event_journal / event_snapshot tables
+});
+
+await store.createTables(); // idempotent (CREATE TABLE IF NOT EXISTS)
+```
+
+- **journal**: `PRIMARY KEY (aggregate_id, seq_nr)` rejects duplicate events
+  (the DynamoDB `attribute_not_exists` condition equivalent)
+- **snapshot**: `aggregate_id` PK holds the latest snapshot per aggregate;
+  optimistic locking via a version-conditioned UPSERT
+- Event + snapshot are written in a single transaction
+- `traceparent` / `tracestate` columns are NULL when no trace is active
 
 ## Development
 

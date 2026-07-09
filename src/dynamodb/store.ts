@@ -15,6 +15,7 @@ import {
   StoreError,
 } from "../errors.js";
 import type { EventStore } from "../event-store.js";
+import { currentTraceContext } from "../otel.js";
 import type { AggregateSerializer, EventSerializer } from "../serializer.js";
 import type {
   Aggregate,
@@ -25,7 +26,6 @@ import type {
   StoredSnapshot,
 } from "../types.js";
 import { KeyResolver } from "./key-resolver.js";
-import { currentTraceContext } from "./otel.js";
 
 // Attribute names shared with the Go implementation (wire contract).
 const ATTR = {

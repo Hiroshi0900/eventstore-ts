@@ -26,6 +26,11 @@
       "types": "./dist/dynamodb/index.d.ts",
       "import": "./dist/dynamodb/index.js",
       "require": "./dist/dynamodb/index.cjs"
+    },
+    "./postgres": {
+      "types": "./dist/postgres/index.d.ts",
+      "import": "./dist/postgres/index.js",
+      "require": "./dist/postgres/index.cjs"
     }
   },
   "scripts": {
