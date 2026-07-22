@@ -2,11 +2,12 @@ export type {
   AggregateId,
   Aggregate,
   Command,
+  Decided,
   Event,
   StoredEvent,
   StoredSnapshot,
 } from "./types.js";
-export { newAggregateId } from "./types.js";
+export { decideNext, newAggregateId } from "./types.js";
 export {
   AggregateNotFoundError,
   DuplicateAggregateError,
@@ -15,7 +16,9 @@ export {
   SerializationError,
   StoreError,
   type EventStoreError,
+  type LoadError,
   type RepositoryError,
+  type SaveError,
 } from "./errors.js";
 export { generateEventId } from "./event-id.js";
 export {

@@ -15,8 +15,11 @@ import type {
  * directly (no serialization), keyed by `id.asString()`. Mirrors the Go
  * memory store's semantics including its locking rules.
  */
-export class MemoryEventStore<A extends Aggregate<C, E>, C extends Command, E extends Event>
-  implements EventStore<A, C, E>
+export class MemoryEventStore<
+  A extends Aggregate<C, E, unknown>,
+  C extends Command,
+  E extends Event,
+> implements EventStore<A, C, E>
 {
   private readonly events = new Map<string, StoredEvent<E>[]>();
   private readonly snapshots = new Map<string, StoredSnapshot<A>>();

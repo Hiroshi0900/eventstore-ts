@@ -13,7 +13,11 @@ import type {
  * Low-level storage abstraction: latest snapshot + event stream reads, plus
  * event / event+snapshot writes. Mirrors the Go EventStore interface.
  */
-export interface EventStore<A extends Aggregate<C, E>, C extends Command, E extends Event> {
+export interface EventStore<
+  A extends Aggregate<C, E, unknown>,
+  C extends Command,
+  E extends Event,
+> {
   getLatestSnapshot(
     id: AggregateId,
   ): ResultAsync<{ snapshot: StoredSnapshot<A>; found: true } | { found: false }, EventStoreError>;

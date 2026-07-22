@@ -1,15 +1,21 @@
 import { type ResultAsync, errAsync, okAsync } from "neverthrow";
 import { type EventStoreConfig, defaultEventStoreConfig, shouldSnapshot } from "./config.js";
-import { AggregateNotFoundError, InvalidAggregateError, type RepositoryError } from "./errors.js";
+import {
+  AggregateNotFoundError,
+  InvalidAggregateError,
+  type LoadError,
+  type SaveError,
+} from "./errors.js";
 import { generateEventId } from "./event-id.js";
 import type { EventStore } from "./event-store.js";
-import type {
-  Aggregate,
-  AggregateId,
-  Command,
-  Event,
-  StoredEvent,
-  StoredSnapshot,
+import {
+  type Aggregate,
+  type AggregateId,
+  type Command,
+  type Event,
+  type StoredEvent,
+  type StoredSnapshot,
+  decideNext,
 } from "./types.js";
 
 const OWNER = Symbol("eventstore.repository.owner");
@@ -28,24 +34,37 @@ interface InternalLoaded<A> extends LoadedAggregate<A> {
   readonly version: bigint;
 }
 
-export interface Repository<A extends Aggregate<C, E>, C extends Command, E extends Event> {
+export interface Repository<
+  A extends Aggregate<C, E, DE>,
+  C extends Command,
+  E extends Event,
+  DE = Error,
+> {
   /** Returns a blank handle at seqNr 0 / version 0 without touching storage. */
   newAggregate(id: AggregateId): LoadedAggregate<A>;
   /** Loads the latest snapshot (if any) and replays subsequent events. */
-  load(id: AggregateId): ResultAsync<LoadedAggregate<A>, RepositoryError>;
+  load(id: AggregateId): ResultAsync<LoadedAggregate<A>, LoadError>;
   /** Applies the command, persists the resulting event (and snapshot when due). */
-  save(loaded: LoadedAggregate<A>, cmd: C): ResultAsync<LoadedAggregate<A>, RepositoryError>;
+  save(loaded: LoadedAggregate<A>, cmd: C): ResultAsync<LoadedAggregate<A>, SaveError<DE>>;
 }
 
-export interface RepositoryOptions<A extends Aggregate<C, E>, C extends Command, E extends Event> {
+export interface RepositoryOptions<
+  A extends Aggregate<C, E, DE>,
+  C extends Command,
+  E extends Event,
+  DE = Error,
+> {
   store: EventStore<A, C, E>;
   createBlank: (id: AggregateId) => A;
   config?: EventStoreConfig;
 }
 
-export function createRepository<A extends Aggregate<C, E>, C extends Command, E extends Event>(
-  options: RepositoryOptions<A, C, E>,
-): Repository<A, C, E> {
+export function createRepository<
+  A extends Aggregate<C, E, DE>,
+  C extends Command,
+  E extends Event,
+  DE = Error,
+>(options: RepositoryOptions<A, C, E, DE>): Repository<A, C, E, DE> {
   const { store, createBlank } = options;
   const config = options.config ?? defaultEventStoreConfig();
   const ownerToken = {};
@@ -82,7 +101,7 @@ export function createRepository<A extends Aggregate<C, E>, C extends Command, E
 
         return store.getEventsSince(id, base.seqNr).andThen((events) => {
           if (!result.found && events.length === 0) {
-            return errAsync<LoadedAggregate<A>, RepositoryError>(
+            return errAsync<LoadedAggregate<A>, LoadError>(
               new AggregateNotFoundError(id.asString()),
             );
           }
@@ -103,12 +122,11 @@ export function createRepository<A extends Aggregate<C, E>, C extends Command, E
         return errAsync(new InvalidAggregateError("aggregate was not loaded from this repository"));
       }
 
-      const commandResult = current.aggregate().applyCommand(cmd);
-      if (commandResult.isErr()) {
-        return errAsync(commandResult.error);
+      const decided = decideNext<A, C, E, DE>(current.aggregate(), cmd);
+      if (decided.isErr()) {
+        return errAsync(decided.error);
       }
-      const event = commandResult.value;
-      const next = current.aggregate().applyEvent(event) as A;
+      const { event, next } = decided.value;
       const nextSeqNr = current.seqNr + 1n;
       const now = new Date();
 

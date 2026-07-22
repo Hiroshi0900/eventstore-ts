@@ -88,8 +88,11 @@ export interface DynamoDBStoreOptions<A, E> {
  * same table/GSI layout, key formats, attribute names and condition
  * expressions, so both languages can share the same tables.
  */
-export class DynamoDBEventStore<A extends Aggregate<C, E>, C extends Command, E extends Event>
-  implements EventStore<A, C, E>
+export class DynamoDBEventStore<
+  A extends Aggregate<C, E, unknown>,
+  C extends Command,
+  E extends Event,
+> implements EventStore<A, C, E>
 {
   private readonly client: DynamoDBClientLike;
   private readonly aggSer: AggregateSerializer<A>;

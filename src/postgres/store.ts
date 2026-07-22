@@ -63,8 +63,11 @@ export interface PostgresStoreOptions<A, E> {
  * and the same optimistic-lock semantics — DynamoDB's conditional writes map
  * to ON CONFLICT DO NOTHING / version-conditioned UPSERT in one transaction.
  */
-export class PostgresEventStore<A extends Aggregate<C, E>, C extends Command, E extends Event>
-  implements EventStore<A, C, E>
+export class PostgresEventStore<
+  A extends Aggregate<C, E, unknown>,
+  C extends Command,
+  E extends Event,
+> implements EventStore<A, C, E>
 {
   private readonly pool: PgPoolLike;
   private readonly aggSer: AggregateSerializer<A>;

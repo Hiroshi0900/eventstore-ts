@@ -58,6 +58,16 @@ export type EventStoreError =
   | SerializationError
   | StoreError;
 
+/** Failures `Repository.load` can produce. `load` never runs domain logic. */
+export type LoadError = EventStoreError | AggregateNotFoundError;
+
+/**
+ * Failures `Repository.save` can produce: storage failures, handle misuse
+ * (`InvalidAggregateError`), or the aggregate's own domain rejection `DE`.
+ */
+export type SaveError<DE> = EventStoreError | InvalidAggregateError | DE;
+
+/** @deprecated Use `LoadError` / `SaveError<DE>` — this loses the per-operation split. */
 export type RepositoryError =
   | EventStoreError
   | AggregateNotFoundError
